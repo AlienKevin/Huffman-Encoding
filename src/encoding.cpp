@@ -1,21 +1,14 @@
-// TODO: remove and replace this file header comment
-// This is the CPP file you will edit and turn in.
-// Remove starter comments and add your own
-// comments on each function and on complex code sections.
-
 #include "encoding.h"
 #include "priorityqueue.h"
 
 Map<char, int> buildFrequencyTable(istream& input)
 {
-    // A line that reads: (void)parameter 
-    // is included in starter to suppress warnings about
-    // unused parameters for as-yet-unimplemented functions
-    // Remove these lines when ready to implement the function
-
-    // TODO: implement this function
-    (void) input;
-    return {};
+    Map<char, int> table = Map<char, int>();
+    char ch;
+    while (input.get(ch)) {
+        table[ch] ++;
+    }
+    return table;
 }
 
 HuffmanNode* buildEncodingTree(Map<char, int>& freqTable)
