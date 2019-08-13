@@ -1,5 +1,6 @@
 #include "encoding.h"
 #include "priorityqueue.h"
+#include "strlib.h"
 
 void buildEncodingMapHelper(HuffmanNode* encodingTree, string encoding, Map<char, string>& encodingMap);
 
@@ -40,11 +41,16 @@ HuffmanNode* buildEncodingTree(Map<char, int>& freqTable) {
     return root;
 }
 
-string flattenTreeToHeader(HuffmanNode* t)
-{
-    // TODO: implement this function
-    (void) t;
-    return "";
+string flattenTreeToHeader(HuffmanNode* t) {
+    // do a pre-order traversal of the tree to generate header
+    if (t->isLeaf()) {
+        // write a leaf node in the form .A (i.e. a period followed by the specific character)
+        return "." + charToString(t->ch);
+    } else {
+        // write an interior node as a pair of parens wrapped around its two child nodes (ZO)
+        // (Z and O could each be either leaf or internal nodes)
+        return "((" + flattenTreeToHeader(t->zero) + ")" + "(" + flattenTreeToHeader(t->one) + "))";
+    }
 }
 
 HuffmanNode* recreateTreeFromHeader(string str)
