@@ -1,8 +1,7 @@
 #include "encoding.h"
 #include "priorityqueue.h"
 
-Map<char, int> buildFrequencyTable(istream& input)
-{
+Map<char, int> buildFrequencyTable(istream& input) {
     Map<char, int> table = Map<char, int>();
     char ch;
     while (input.get(ch)) {
@@ -11,11 +10,32 @@ Map<char, int> buildFrequencyTable(istream& input)
     return table;
 }
 
-HuffmanNode* buildEncodingTree(Map<char, int>& freqTable)
-{
-    // TODO: implement this function
-    (void) freqTable;
-    return nullptr;
+HuffmanNode* buildEncodingTree(Map<char, int>& freqTable) {
+    PriorityQueue<HuffmanNode*> forest = PriorityQueue<HuffmanNode*>();
+    // load all characters (singleton trees) into forest
+    for (int i = 0; i < freqTable.keys().size(); i++) {
+        char ch = freqTable.keys()[i];
+        int weight = freqTable[ch];
+        // create a new HuffmanNode for each character
+        HuffmanNode* newNode = new HuffmanNode(ch);
+        // put the new node into the forest
+        forest.enqueue(newNode, weight);
+    }
+    // do the building
+    HuffmanNode* root = nullptr;
+    while (forest.size() > 1) { // not all subtrees have been combined under one single root
+        // find and remove two least weighted subtrees from the forest
+        int node1Priority = forest.peekPriority();
+        HuffmanNode* node1 = forest.dequeue();
+        int node2Priority = forest.peekPriority();
+        HuffmanNode* node2 = forest.dequeue();
+        // combine these two subtrees under one single root
+        root = new HuffmanNode(node1, node2);
+        int rootPriority = node1Priority + node2Priority;
+        // put the root back to the forest
+        forest.enqueue(root, rootPriority);
+    }
+    return root;
 }
 
 string flattenTreeToHeader(HuffmanNode* t)
