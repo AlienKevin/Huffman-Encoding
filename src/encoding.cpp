@@ -1,6 +1,8 @@
 #include "encoding.h"
 #include "priorityqueue.h"
 
+void buildEncodingMapHelper(HuffmanNode* encodingTree, string encoding, Map<char, string>& encodingMap);
+
 Map<char, int> buildFrequencyTable(istream& input) {
     Map<char, int> table = Map<char, int>();
     char ch;
@@ -52,11 +54,19 @@ HuffmanNode* recreateTreeFromHeader(string str)
     return nullptr;
 }
 
-Map<char, string> buildEncodingMap(HuffmanNode* encodingTree)
-{
-    // TODO: implement this function
-    (void) encodingTree;
-    return {};
+Map<char, string> buildEncodingMap(HuffmanNode* encodingTree) {
+    Map<char, string> map = Map<char, string>();
+    buildEncodingMapHelper(encodingTree, "", map);
+    return map;
+}
+
+void buildEncodingMapHelper(HuffmanNode* encodingTree, string encoding, Map<char, string>& encodingMap) {
+    if (encodingTree->isLeaf()) {
+        encodingMap[encodingTree->ch] = encoding;
+    } else {
+        buildEncodingMapHelper(encodingTree->zero, encoding + "0", encodingMap);
+        buildEncodingMapHelper(encodingTree->one, encoding + "1", encodingMap);
+    }
 }
 
 void freeTree(HuffmanNode* t)
