@@ -1,8 +1,10 @@
 #include "encoding.h"
 #include "priorityqueue.h"
 #include "strlib.h"
+#include "stack.h"
 
 void buildEncodingMapHelper(HuffmanNode* encodingTree, string encoding, Map<char, string>& encodingMap);
+void recreateTreeFromHeaderHelper(string str, HuffmanNode* tree);
 
 Map<char, int> buildFrequencyTable(istream& input) {
     Map<char, int> table = Map<char, int>();
@@ -49,15 +51,61 @@ string flattenTreeToHeader(HuffmanNode* t) {
     } else {
         // write an interior node as a pair of parens wrapped around its two child nodes (ZO)
         // (Z and O could each be either leaf or internal nodes)
-        return "((" + flattenTreeToHeader(t->zero) + ")" + "(" + flattenTreeToHeader(t->one) + "))";
+        return "(" + flattenTreeToHeader(t->zero) + flattenTreeToHeader(t->one) + ")";
     }
 }
 
-HuffmanNode* recreateTreeFromHeader(string str)
-{
-    // TODO: implement this function
-    (void) str;
-    return nullptr;
+HuffmanNode* recreateTreeFromHeader(string str) {
+    // ((. (.$.Z))(.A.n))
+    HuffmanNode* tree = new HuffmanNode(nullptr, nullptr);
+    recreateTreeFromHeaderHelper(str.substr(1, str.size() - 2), tree);
+    return tree;
+}
+
+int findMatchingParenthesis(string str) {
+    Stack<bool> parenStack = Stack<bool>();
+    parenStack.push(true);
+    int currentIndex = 1;
+    while (currentIndex < str.size() && !parenStack.isEmpty()) {
+        if (str[currentIndex] == '(') {
+            parenStack.push(true);
+        } else if (str[currentIndex] == ')') {
+            parenStack.pop();
+        }
+        currentIndex ++;
+    }
+    if (parenStack.isEmpty()) {
+        return currentIndex - 1;
+    }
+    return -1;
+}
+
+void recreateTreeFromHeaderHelper(string str, HuffmanNode* tree) {
+    if (str.size() == 0) {
+        return;
+    }
+    cout << "str: " << str << endl;
+    if (str[0] == '(') {
+        int closeParenIndex = findMatchingParenthesis(str);
+        cout << "closeParenIndex: " << closeParenIndex << endl;
+        tree->zero = new HuffmanNode(nullptr, nullptr);
+        recreateTreeFromHeaderHelper(str.substr(1, closeParenIndex - 1), tree->zero);
+        if (str.size() - closeParenIndex - 1 > 0) {
+            tree->one = new HuffmanNode(nullptr, nullptr);
+            cout << "str.size() - closeParenIndex - 1: " << str.size() - closeParenIndex - 1 << endl;
+            recreateTreeFromHeaderHelper(str.substr(closeParenIndex + 1, str.size() - closeParenIndex - 1), tree->one);
+        }
+    } else if (str[0] == '.') {
+        if (tree->zero == nullptr) {
+            tree->zero = new HuffmanNode(nullptr, nullptr);
+            tree->zero->ch = str[1];
+            recreateTreeFromHeaderHelper(str.substr(2), tree);
+        } else {
+            tree->one = new HuffmanNode(nullptr, nullptr);
+            tree->one->ch = str[1];
+            recreateTreeFromHeaderHelper(str.substr(2), tree);
+        }
+    }
 }
 
 Map<char, string> buildEncodingMap(HuffmanNode* encodingTree) {
