@@ -5,7 +5,7 @@
 #include "filelib.h"
 
 void buildEncodingMapHelper(HuffmanNode* encodingTree, string encoding, Map<char, string>& encodingMap);
-void recreateTreeFromHeaderHelper(string str, HuffmanNode* tree);
+void recreateTreeFromHeaderHelper(string str, HuffmanNode*& tree);
 
 Map<char, int> buildFrequencyTable(istream& input) {
     Map<char, int> table = Map<char, int>();
@@ -36,7 +36,7 @@ HuffmanNode* buildEncodingTree(Map<char, int>& freqTable) {
         int node2Priority = forest.peekPriority();
         HuffmanNode* node2 = forest.dequeue();
         // combine these two subtrees under one single root
-        root = new HuffmanNode(node1, node2);
+        root = new HuffmanNode(node2, node1);
         int rootPriority = node1Priority + node2Priority;
         // put the root back to the forest
         forest.enqueue(root, rootPriority);
@@ -57,8 +57,8 @@ string flattenTreeToHeader(HuffmanNode* t) {
 }
 
 HuffmanNode* recreateTreeFromHeader(string str) {
-    HuffmanNode* tree = new HuffmanNode(nullptr, nullptr);
-    recreateTreeFromHeaderHelper(str.substr(1, str.size() - 2), tree);
+    HuffmanNode* tree = nullptr;
+    recreateTreeFromHeaderHelper(str, tree);
     return tree;
 }
 
@@ -80,30 +80,38 @@ int findMatchingParenthesis(string str) {
     return -1;
 }
 
-void recreateTreeFromHeaderHelper(string str, HuffmanNode* tree) {
+void recreateTreeFromHeaderHelper(string str, HuffmanNode*& tree) {
     if (str.size() == 0) {
         return;
     }
-    cout << "str: " << str << endl;
     if (str[0] == '(') {
-        int closeParenIndex = findMatchingParenthesis(str);
-        cout << "closeParenIndex: " << closeParenIndex << endl;
-        tree->zero = new HuffmanNode(nullptr, nullptr);
-        recreateTreeFromHeaderHelper(str.substr(1, closeParenIndex - 1), tree->zero);
-        if (str.size() - closeParenIndex - 1 > 0) {
-            tree->one = new HuffmanNode(nullptr, nullptr);
-            cout << "str.size() - closeParenIndex - 1: " << str.size() - closeParenIndex - 1 << endl;
-            recreateTreeFromHeaderHelper(str.substr(closeParenIndex + 1, str.size() - closeParenIndex - 1), tree->one);
+        if (tree == nullptr) {
+            tree = new HuffmanNode(nullptr, nullptr);
+        }
+        int closingParenIndex = findMatchingParenthesis(str);
+        if (str.size() - closingParenIndex - 1 > 0) {
+            tree->zero = new HuffmanNode(nullptr, nullptr);
+            if (str[str.size() - 1] == ')') {
+                tree->one = new HuffmanNode(nullptr, nullptr);
+            }
+            recreateTreeFromHeaderHelper(str.substr(1, closingParenIndex - 1), tree->zero);
+            recreateTreeFromHeaderHelper(str.substr(closingParenIndex + 1, str.size() - closingParenIndex - 1), tree->one);
+        } else {
+            if (str[1] == '(') {
+                recreateTreeFromHeaderHelper(str.substr(1, str.size() - 2), tree);
+            } else {
+                recreateTreeFromHeaderHelper(str.substr(1, 2), tree->zero);
+                recreateTreeFromHeaderHelper(str.substr(3, str.size() - 4), tree->one);
+            }
         }
     } else if (str[0] == '.') {
-        if (tree->zero == nullptr) {
-            tree->zero = new HuffmanNode(nullptr, nullptr);
-            tree->zero->ch = str[1];
-            recreateTreeFromHeaderHelper(str.substr(2), tree);
-        } else {
-            tree->one = new HuffmanNode(nullptr, nullptr);
-            tree->one->ch = str[1];
-            recreateTreeFromHeaderHelper(str.substr(2), tree);
+        if (tree == nullptr) {
+            tree = new HuffmanNode(str[1]);
+        } else if (tree->zero == nullptr) {
+            tree->zero = new HuffmanNode(str[1]);
+            recreateTreeFromHeaderHelper(str.substr(2), tree->one);
+        }else {
+            tree->one = new HuffmanNode(str[1]);
         }
     }
 }
@@ -154,9 +162,32 @@ void compress(istream& input, HuffmanOutputFile& output) {
     }
 }
 
-void decompress(HuffmanInputFile& input, ostream& output)
-{
-    // TODO: implement this function
-    (void) input;
-    (void) output;
+void decompress(HuffmanInputFile& input, ostream& output) {
+    string header = input.readHeader();
+    HuffmanNode* encodingTree = recreateTreeFromHeader(header);
+    printSideways(encodingTree);
+    int bit = input.readBit();
+    HuffmanNode* currentNode = encodingTree;
+    while (bit != -1) {
+//        // reached the end of the tree
+//        if (currentNode == nullptr) {
+//            // reset currentNode to the root of the tree
+//            // to continue looking for new characters
+//            currentNode = encodingTree;
+//        }
+        if (bit == 0) {
+            currentNode = currentNode->zero;
+        } else if (bit == 1) {
+            currentNode = currentNode->one;
+        }
+        // found a character in the tree
+        if (currentNode->isLeaf()) {
+            output << currentNode->ch;
+            // reset currentNode to the root of the tree
+            // to continue looking for new characters
+            currentNode = encodingTree;
+        }
+        bit = input.readBit();
+    }
+    freeTree(encodingTree);
 }

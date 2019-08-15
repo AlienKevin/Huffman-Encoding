@@ -142,6 +142,7 @@ DISTFILES *= "" \
     res/one.txt \
     res/prideandprejudice.txt \
     res/seuss.txt \
+    res/short.txt \
     res/stanford.tiff \
     res/suess.txt
 DISTFILES = ""
