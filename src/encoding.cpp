@@ -7,6 +7,11 @@
 void buildEncodingMapHelper(HuffmanNode* encodingTree, string encoding, Map<char, string>& encodingMap);
 void recreateTreeFromHeaderHelper(string str, HuffmanNode*& tree);
 
+/**
+ * @brief Build frequency table for a given input
+ * @param input the input to encode
+ * @return the frequency table as a map
+ */
 Map<char, int> buildFrequencyTable(istream& input) {
     Map<char, int> table = Map<char, int>();
     char ch;
@@ -16,6 +21,11 @@ Map<char, int> buildFrequencyTable(istream& input) {
     return table;
 }
 
+/**
+ * @brief Build an encoding tree for a given frequency table
+ * @param freqTable the input frequency table
+ * @return the root of a Huffman encoding tree
+ */
 HuffmanNode* buildEncodingTree(Map<char, int>& freqTable) {
     PriorityQueue<HuffmanNode*> forest = PriorityQueue<HuffmanNode*>();
     // load all characters (singleton trees) into forest
@@ -44,6 +54,11 @@ HuffmanNode* buildEncodingTree(Map<char, int>& freqTable) {
     return root;
 }
 
+/**
+ * @brief Flatten the encoding tree into a string header for storage
+ * @param t the root of a Huffman encoding tree
+ * @return the string header of the input encoding tree
+ */
 string flattenTreeToHeader(HuffmanNode* t) {
     // do a pre-order traversal of the tree to generate header
     if (t->isLeaf()) {
@@ -56,12 +71,22 @@ string flattenTreeToHeader(HuffmanNode* t) {
     }
 }
 
+/**
+ * @brief Recreate a Huffman encoding tree from a string header
+ * @param str the string header to recreate from
+ * @return the root of a Huffman encoding tree
+ */
 HuffmanNode* recreateTreeFromHeader(string str) {
     HuffmanNode* tree = nullptr;
     recreateTreeFromHeaderHelper(str, tree);
     return tree;
 }
 
+/**
+ * @brief Find the matching right parenthesis of the starting left parenthesis
+ * @param str the string to search in
+ * @return the index of the matching right parenthesis, -1 if not found
+ */
 int findMatchingParenthesis(string str) {
     Stack<bool> parenStack = Stack<bool>();
     parenStack.push(true);
@@ -80,48 +105,75 @@ int findMatchingParenthesis(string str) {
     return -1;
 }
 
+/**
+ * @brief Helper function for recreateTreeFromHeader
+ * @param str the string header to recreate from
+ * @param tree the Huffman encoding tree to recreate
+ */
 void recreateTreeFromHeaderHelper(string str, HuffmanNode*& tree) {
+    // Reach the end of header string, tree is complete
     if (str.size() == 0) {
         return;
     }
+    // Reach an intermediate node
     if (str[0] == '(') {
         if (tree == nullptr) {
             tree = new HuffmanNode(nullptr, nullptr);
         }
         int closingParenIndex = findMatchingParenthesis(str);
+        // The inside string is split into two parts, i.e. # of intermediate nodes >= 1
         if (str.size() - closingParenIndex - 1 > 0) {
+            // create a new intermediate node for the first part of the string
             tree->zero = new HuffmanNode(nullptr, nullptr);
+            // create a new intermediate node if the second part of the string is parenthesized
             if (str[str.size() - 1] == ')') {
                 tree->one = new HuffmanNode(nullptr, nullptr);
             }
+            // create subtree for the first part of the string
             recreateTreeFromHeaderHelper(str.substr(1, closingParenIndex - 1), tree->zero);
+            // create subtree for the second part of the string
             recreateTreeFromHeaderHelper(str.substr(closingParenIndex + 1, str.size() - closingParenIndex - 1), tree->one);
-        } else {
+        } else { // The inside string is either: see (1) and (2)
+            // (1): one intermediate node
             if (str[1] == '(') {
                 recreateTreeFromHeaderHelper(str.substr(1, str.size() - 2), tree);
-            } else {
+            } else { // (2): one leaf + (one leaf or one intermediate node)
+                // Add character in the leaf to tree
                 recreateTreeFromHeaderHelper(str.substr(1, 2), tree->zero);
+                // Add the rest string (one leaf or one intermediate node) to tree
                 recreateTreeFromHeaderHelper(str.substr(3, str.size() - 4), tree->one);
             }
         }
+    // reach a leaf node containing one character
     } else if (str[0] == '.') {
-        if (tree == nullptr) {
+        if (tree == nullptr) { // end of tree
             tree = new HuffmanNode(str[1]);
-        } else if (tree->zero == nullptr) {
+        } else if (tree->zero == nullptr) { // first fill in the 'zero' (left) branch
             tree->zero = new HuffmanNode(str[1]);
             recreateTreeFromHeaderHelper(str.substr(2), tree->one);
-        }else {
+        }else { // then fill in the 'one' (right) branch
             tree->one = new HuffmanNode(str[1]);
         }
     }
 }
 
+/**
+ * @brief Build an encoding map for a Huffman encoding tree
+ * @param encodingTree the encoding tree to create map for
+ * @return the encoding map
+ */
 Map<char, string> buildEncodingMap(HuffmanNode* encodingTree) {
     Map<char, string> map = Map<char, string>();
     buildEncodingMapHelper(encodingTree, "", map);
     return map;
 }
 
+/**
+ * @brief Helper function for buildEncodingMap
+ * @param encodingTree the encoding tree to create map for
+ * @param encoding the string encoding for a character (at a leaf node)
+ * @return the encoding map
+ */
 void buildEncodingMapHelper(HuffmanNode* encodingTree, string encoding, Map<char, string>& encodingMap) {
     if (encodingTree->isLeaf()) {
         encodingMap[encodingTree->ch] = encoding;
@@ -131,6 +183,10 @@ void buildEncodingMapHelper(HuffmanNode* encodingTree, string encoding, Map<char
     }
 }
 
+/**
+ * @brief Free the allocated memory used in encoding/decoding process
+ * @param t the root of the encoding tree
+ */
 void freeTree(HuffmanNode* t)
 {
     if (t == nullptr) {
@@ -145,12 +201,19 @@ void freeTree(HuffmanNode* t)
     t = nullptr;
 }
 
+/**
+ * @brief Compress an input to a Huffman-encoded output
+ * @param input the input to compress
+ * @param output the compressed output in Huffman encoding
+ */
 void compress(istream& input, HuffmanOutputFile& output) {
     Map<char, int> freqTable = buildFrequencyTable(input);
     rewindStream(input);
     HuffmanNode* encodingTree = buildEncodingTree(freqTable);
+    // first write the header
     string header = flattenTreeToHeader(encodingTree);
     output.writeHeader(header);
+    // then write the encoded characters
     Map<char, string> encodingMap = buildEncodingMap(encodingTree);
     freeTree(encodingTree);
     char ch;
@@ -162,25 +225,23 @@ void compress(istream& input, HuffmanOutputFile& output) {
     }
 }
 
+/**
+ * @brief Decompress a Huffman-encoded input to original format
+ * @param input the input to decompress
+ * @param output the decompressed output in original format
+ */
 void decompress(HuffmanInputFile& input, ostream& output) {
     string header = input.readHeader();
     HuffmanNode* encodingTree = recreateTreeFromHeader(header);
-    printSideways(encodingTree);
     int bit = input.readBit();
     HuffmanNode* currentNode = encodingTree;
     while (bit != -1) {
-//        // reached the end of the tree
-//        if (currentNode == nullptr) {
-//            // reset currentNode to the root of the tree
-//            // to continue looking for new characters
-//            currentNode = encodingTree;
-//        }
         if (bit == 0) {
             currentNode = currentNode->zero;
         } else if (bit == 1) {
             currentNode = currentNode->one;
         }
-        // found a character in the tree
+        // found a leaf with character in the tree
         if (currentNode->isLeaf()) {
             output << currentNode->ch;
             // reset currentNode to the root of the tree
