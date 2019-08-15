@@ -77,8 +77,16 @@ void buildEncodingMapHelper(HuffmanNode* encodingTree, string encoding, Map<char
 
 void freeTree(HuffmanNode* t)
 {
-    // TODO: implement this function
-    (void) t;
+    if (t == nullptr) {
+        return;
+    }
+    if (t->isLeaf()) {
+        delete t;
+    } else {
+        freeTree(t->zero);
+        freeTree(t->one);
+    }
+    t = nullptr;
 }
 
 void compress(istream& input, HuffmanOutputFile& output)
