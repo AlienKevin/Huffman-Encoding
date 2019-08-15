@@ -2,6 +2,7 @@
 #include "priorityqueue.h"
 #include "strlib.h"
 #include "stack.h"
+#include "filelib.h"
 
 void buildEncodingMapHelper(HuffmanNode* encodingTree, string encoding, Map<char, string>& encodingMap);
 void recreateTreeFromHeaderHelper(string str, HuffmanNode* tree);
@@ -56,7 +57,6 @@ string flattenTreeToHeader(HuffmanNode* t) {
 }
 
 HuffmanNode* recreateTreeFromHeader(string str) {
-    // ((. (.$.Z))(.A.n))
     HuffmanNode* tree = new HuffmanNode(nullptr, nullptr);
     recreateTreeFromHeaderHelper(str.substr(1, str.size() - 2), tree);
     return tree;
@@ -137,11 +137,21 @@ void freeTree(HuffmanNode* t)
     t = nullptr;
 }
 
-void compress(istream& input, HuffmanOutputFile& output)
-{
-    // TODO: implement this function
-    (void) input;
-    (void) output;
+void compress(istream& input, HuffmanOutputFile& output) {
+    Map<char, int> freqTable = buildFrequencyTable(input);
+    rewindStream(input);
+    HuffmanNode* encodingTree = buildEncodingTree(freqTable);
+    string header = flattenTreeToHeader(encodingTree);
+    output.writeHeader(header);
+    Map<char, string> encodingMap = buildEncodingMap(encodingTree);
+    freeTree(encodingTree);
+    char ch;
+    while (input.get(ch)) {
+        string encoding = encodingMap.get(ch);
+        for (int i = 0; i < encoding.size(); i++) {
+            output.writeBit(charToInteger(encoding[i]));
+        }
+    }
 }
 
 void decompress(HuffmanInputFile& input, ostream& output)
